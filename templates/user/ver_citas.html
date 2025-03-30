@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- jsPDF y html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='bootstrap/css/registro.css') }}"
+    />
+    <title>Ver Citas</title>
+    <style>
+      .fondo-delineado {
+        margin: 0;
+        height: 100vh;
+        background: linear-gradient(to bottom, #ffffff, #ffffff);
+        display: flex;
+      }
+
+      #sidebarFrame {
+        width: 250px;
+        height: 100vh;
+        border: none;
+      }
+
+      .main-content {
+        flex-grow: 1;
+        padding: 20px;
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        justify-content: center;
+        align-items: center;
+      }
+      .modal-content {
+        background-color: white;
+        padding: 20px;
+        border-radius: 5px;
+        width: 80%;
+      }
+      .modal.show {
+        display: flex;
+      }
+    </style>
+  </head>
+
+  <body class="fondo-delineado">
+    <iframe id="sidebarFrame" src="{{ url_for('menu') }}"></iframe>
+    <div class="main-content">
+      <div class="container">
+        <br /><br /><br />
+        <div style="text-align: center">
+          <h3>Citas Agendadas</h3>
+        </div>
+        <div class="row justify-content-center">
+          <div
+            class="col-md-8 col-lg-6"
+            style="
+              color: #17283b;
+              border-radius: 5px;
+              padding: 20px;
+              box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            "
+          >
+            <table class="table table-striped" border="1">
+              <thead>
+                <tr>
+                  <th>Fecha y Hora</th>
+                  <th>Paciente</th>
+                  <th>Motivo</th>
+                </tr>
+              </thead>
+              <tbody id="citasBody"></tbody>
+            </table>
+
+            <!-- Modal -->
+            <div
+              class="modal fade"
+              id="pacienteModal"
+              tabindex="-1"
+              aria-labelledby="pacienteModalLabel"
+              aria-hidden="true"
+            >
+              <div class="modal-dialog modal-lg">
+                <!-- Añade la clase modal-lg aquí -->
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="pacienteModalLabel">
+                      Detalles del Paciente
+                    </h5>
+                    <button
+                      type="button"
+                      class="btn-close"
+                      data-bs-dismiss="modal"
+                      aria-label="Cerrar"
+                    ></button>
+                  </div>
+                  <div class="modal-body">
+                    <p>
+                      <strong>Nombre:</strong> <span id="modalNombre"></span>
+                    </p>
+                    <ul id="cedula">
+                      Cedula:
+                      <span id="modalCedula"></span>
+                    </ul>
+                    <ul id="fecha_c">
+                      Fecha Consulta:
+                      <span id="modalFechaConsulta"></span>
+                    </ul>
+                    <ul id="celular">
+                      Celular:
+                      <span id="modalCelular"></span>
+                    </ul>
+                    <ul id="direccion">
+                      Direccion:
+                      <span id="modalDireccion"></span>
+                    </ul>
+                    <p><strong>Historial:</strong></p>
+                    <ul id="modalHistorial"></ul>
+                  </div>
+                  <div class="modal-footer">
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      data-bs-dismiss="modal"
+                    >
+                      Cerrar
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-success"
+                      id="submitButton"
+                    >
+                      Crear Historial
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-primary"
+                      id="exportarPDF"
+                    >
+                      Exportar a PDF
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Segundo Modal -->
+            <div
+              class="modal fade"
+              id="historialModal"
+              tabindex="-1"
+              aria-labelledby="historialModalLabel"
+              aria-hidden="true"
+            >
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="historialModalLabel">
+                      Crear Historial
+                    </h5>
+                    <button
+                      type="button"
+                      class="btn-close"
+                      data-bs-dismiss="modal"
+                      aria-label="Cerrar"
+                    ></button>
+                  </div>
+                  <div class="modal-body">
+                    <!-- Contenido del segundo modal -->
+                    <div class="mb-3">
+                      <label for="informe" class="form-label"
+                        ><b>Informe</b></label
+                      >
+                      <textarea
+                        type="text"
+                        class="form-control"
+                        id="informe"
+                        name="informe"
+                      ></textarea>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      data-bs-dismiss="modal"
+                    >
+                      Cerrar
+                    </button>
+                    <button
+                      type="button"
+                      id="guardarHistorial"
+                      class="btn btn-primary"
+                    >
+                      Guardar Historial
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='bootstrap/js/bootstrap.min.js') }}"></script>
+    <script>
+      // Función para cargar las citas desde el endpoint
+      async function cargarCitas() {
+        try {
+          // Obtener el ID del doctor desde el localStorage
+          const doctorId = localStorage.getItem("id");
+          const url = `{{ url_for('cita.list', id=0).rsplit('/', 1)[0] }}/${doctorId}`;
+          const response = await fetch(url); // Flask endpoint
+          if (response.ok) {
+            const data = await response.json();
+            const citasBody = document.getElementById("citasBody");
+
+            // Limpiar el contenido existente
+            //  citasBody.innerHTML = "";
+
+            // Agregar las filas dinámicamente
+            data.citas.forEach((cita) => {
+              const row = document.createElement("tr");
+
+              const fechaHoraCell = document.createElement("td");
+              fechaHoraCell.textContent = cita.fecha;
+              row.appendChild(fechaHoraCell);
+
+              const pacienteCell = document.createElement("td");
+              const pacienteLink = document.createElement("a");
+              pacienteLink.href = "#";
+              pacienteLink.className = "open-modal";
+              pacienteLink.setAttribute("data-bs-toggle", "modal");
+              pacienteLink.setAttribute("data-bs-target", "#pacienteModal");
+              pacienteLink.setAttribute("data-nombre", cita.paciente_nombre);
+              pacienteLink.setAttribute("data-id", cita.patient_id);
+              pacienteLink.setAttribute("data-fecha", cita.fecha);
+              pacienteLink.setAttribute(
+                "data-historial",
+                "Historial del paciente"
+              );
+              pacienteLink.textContent = cita.paciente_nombre;
+              pacienteCell.appendChild(pacienteLink);
+              row.appendChild(pacienteCell);
+              const hiddenInput = document.createElement("input");
+              hiddenInput.type = "hidden";
+              hiddenInput.id = `pacienteId_${cita.patient_id}`;
+              hiddenInput.value = cita.patient_id;
+              hiddenInput.style.display = "none"; // Ocultar el input
+              row.appendChild(hiddenInput);
+
+              const motivoCell = document.createElement("td");
+              motivoCell.textContent = cita.motivo;
+              row.appendChild(motivoCell);
+
+              citasBody.appendChild(row);
+            });
+          } else {
+            console.error("Error al cargar las citas");
+          }
+        } catch (err) {
+          console.error("Error al conectar con el servidor:", err);
+        }
+      }
+      document
+        .getElementById("pacienteModal")
+        .addEventListener("show.bs.modal", function () {
+          document.querySelectorAll(".open-modal").forEach((link) => {
+            link.addEventListener("click", async function () {
+              const patientId = this.getAttribute("data-id"); // Obtiene el valor de data-id
+              localStorage.setItem("pacienteId", patientId); // Guardar el ID en localStorage
+              // Llamar a una función para cargar el historial del paciente
+              const historial = await cargarHistorial(patientId);
+              const nombre = this.getAttribute("data-nombre");
+              const fecha = this.getAttribute("data-fecha");
+              const paciente = await cargarPaciente(patientId);
+              console.log("Paciente:", paciente);
+
+              // Mostrar los datos en el modal
+              document.getElementById("modalNombre").textContent = nombre;
+              document.getElementById("modalFechaConsulta").textContent = fecha; // Asignar la fecha al modal
+              document.getElementById("modalCedula").textContent =
+                paciente.identificacion_tipo + paciente.identificacion_numero; // Asignar la cédula al modal
+              document.getElementById("modalCelular").textContent =
+                paciente.telefono; // Asignar el celular al modal
+              document.getElementById("modalDireccion").textContent =
+                paciente.direccion; // Asignar la dirección al modal
+
+              //ciclo para cargar el historial
+              const historialElement =
+                document.getElementById("modalHistorial");
+              historialElement.innerHTML = ""; // Limpiar el contenido existente
+              historial
+                .slice()
+                .reverse()
+                .forEach((item) => {
+                  const li = document.createElement("li");
+                  li.textContent = item.diagnostico; // Cambia esto según la estructura de tu historial
+                  historialElement.appendChild(li);
+                });
+            });
+          });
+        });
+
+      document
+        .getElementById("guardarHistorial")
+        .addEventListener("click", async (e) => {
+          event.preventDefault();
+          const informe = document.getElementById("informe").value;
+          const pacienteId = localStorage.getItem("pacienteId");
+          const response = await fetch(
+            `http://127.0.0.1:5000/historial/crear`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                paciente_id: pacienteId,
+                doctor_id: localStorage.getItem("id"),
+                informe: informe,
+              }),
+            }
+          );
+
+          if (response.status == 201) {
+            const data = await response.json();
+            console.log("Historial guardado:", data);
+            // Cerrar el modal
+            const historialModal = bootstrap.Modal.getInstance(
+              document.getElementById("historialModal")
+            );
+            //limpiar el modal
+            document.getElementById("informe").value = "";
+            historialModal.hide();
+          } else {
+            console.error("Error al guardar el historial");
+          }
+        });
+      // Llamar a la función para cargar las citas al cargar la página
+      cargarCitas();
+
+      // cargar paciente
+      async function cargarPaciente(pacienteId) {
+        try {
+          const response = await fetch(
+            `http://127.0.0.1:5000/paciente/${pacienteId}`
+          ); // Replace with your actual API endpoint
+          if (response.ok) {
+            const data = await response.json();
+            return data.paciente;
+          } else {
+            console.error("Error al cargar el paciente");
+          }
+        } catch (err) {
+          console.error("Error al conectar con el servidor:", err);
+        }
+      }
+
+      //llamar al historial de citas
+      async function cargarHistorial(pacienteId) {
+        try {
+          const response = await fetch(
+            `http://127.0.0.1:5000/historial/${pacienteId}`
+          ); // Replace with your actual API endpoint
+          if (response.ok) {
+            const data = await response.json();
+            console.log("Historial cargado:", data);
+            // Aquí puedes procesar el historial recibido
+            return data; // Asegúrate de que el formato sea correcto
+          } else {
+            console.error("Error al cargar el historial");
+          }
+        } catch (err) {
+          console.error("Error al conectar con el servidor:", err);
+        }
+      }
+
+      // Seleccionar elementos con la clase 'open-modal'
+      const { jsPDF } = window.jspdf;
+      // Exportar a PDF
+      document.getElementById("exportarPDF").addEventListener("click", () => {
+        const pdf = new jsPDF();
+        const nombreElement = document.getElementById("modalNombre");
+        const historialElement = document.getElementById("modalHistorial");
+        const celularElement = document.getElementById("modalCelular");
+        const direccionElement = document.getElementById("modalDireccion");
+        const fechaConsultaElement =
+          document.getElementById("modalFechaConsulta");
+        const cedulaElement = document.getElementById("modalCedula");
+
+        const nombre = nombreElement ? nombreElement.textContent : "";
+        const historial = historialElement ? historialElement.innerText : "";
+        const celular = celularElement ? celularElement.textContent : "";
+        const direccion = direccionElement ? direccionElement.textContent : "";
+        const fechaConsulta = fechaConsultaElement
+          ? fechaConsultaElement.textContent
+          : "";
+        const cedula = cedulaElement ? cedulaElement.textContent : "";
+
+        // Configuración inicial
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(18);
+        pdf.text(`Reporte Médico de ${nombre}`, 105, 15, { align: "center" });
+
+        // Dibujar recuadro para el nombre
+        pdf.setDrawColor(0);
+        pdf.setFillColor(240, 240, 240);
+        pdf.rect(10, 20, 190, 10, "F");
+        pdf.setFontSize(12);
+        // Fecha de consulta en la primera fila
+        pdf.text(`Fecha de Consulta: ${fechaConsulta}`, 12, 26);
+
+        // Nombre y cédula en la misma fila, abajo
+        pdf.text(`Paciente: ${nombre}`, 15, 46);
+        pdf.text(`Cédula: ${cedula}`, 120, 46); // Ajusta la posición horizontal según sea necesario
+
+        // Dirección y celular en la tercera fila
+        pdf.text(`Dirección: ${direccion}`, 15, 66);
+        pdf.text(`Celular: ${celular}`, 120, 66); // Ajusta la posición horizontal según sea necesario
+
+        // Dibujar recuadro para el historial
+        pdf.rect(10, 75, 190, pdf.internal.pageSize.height - 85, "S");
+        pdf.setFont("helvetica", "bold");
+        pdf.text("Historial Médico:", 15, 85);
+
+        // Formatear el historial
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+        const splitHistorial = pdf.splitTextToSize(historial, 180);
+        pdf.text(splitHistorial, 15, 95);
+
+        // Guardar el PDF
+        pdf.save(`Reporte_${nombre}.pdf`);
+      });
+
+      document
+        .getElementById("submitButton")
+        .addEventListener("click", function () {
+          // Cerrar el modal actual
+          var pacienteModal = bootstrap.Modal.getInstance(
+            document.getElementById("pacienteModal")
+          );
+          pacienteModal.hide();
+
+          // Abrir el segundo modal
+          var historialModal = new bootstrap.Modal(
+            document.getElementById("historialModal")
+          );
+          historialModal.show();
+        });
+    </script>
+  </body>
+</html>
